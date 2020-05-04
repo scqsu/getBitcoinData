@@ -9,17 +9,24 @@ import json
 async def startup(uri) :
     async with AioWebSocket(remote) as aws :
         converse = aws.manipulator
+        reqMsg = json.dumps({'sub':'market.btcusdt.trade.detail', 'id':1})
+        await converse.send(reqMsg)
+        preData = []
         while True:
             rec = await converse.receive()
             buff = BytesIO(rec)
             f = gzip.GzipFile(fileobj=buff)
             res = f.read().decode('utf-8')
             rj = json.loads(res)
-            backmsg = '{"pong":' + str(rj['ping']) + '}'
             if 'ping' in rj :
+                backmsg = json.dumps({'pong':rj['ping']})
                 await converse.send(backmsg)
-            print(res, backmsg)
-
+                print(res, backmsg)
+            if 'tick' in rj :
+                print(rj['tick']['ts'])
+            else :
+                print(rj)
+            
     # async with AioWebSocket(uri) as aws :
     #     converse = aws.manipulator
     #     message =  '{"action":"subscribe","args":["QuoteBin5m:14"]}'
