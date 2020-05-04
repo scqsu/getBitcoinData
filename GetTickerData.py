@@ -5,13 +5,20 @@ from io import BytesIO
 from datetime import datetime
 from aiowebsocket.converses import AioWebSocket
 import json
+import sqlite3
+
+conn = sqlite3.connect('btc_tick.db')
+cursor = conn.cursor()
+cursor.execute('create table if not exists tick (tradeId varchar(20) primary key, price float, amount float, ts bigint, direction varchar(20))')
+cursor.close()
+conn.commit()
 
 async def startup(uri) :
     async with AioWebSocket(remote) as aws :
         converse = aws.manipulator
+        
         reqMsg = json.dumps({'sub':'market.btcusdt.trade.detail', 'id':1})
         await converse.send(reqMsg)
-        preData = []
         while True:
             rec = await converse.receive()
             buff = BytesIO(rec)
@@ -23,7 +30,15 @@ async def startup(uri) :
                 await converse.send(backmsg)
                 print(res, backmsg)
             if 'tick' in rj :
-                print(rj['tick']['ts'])
+                cursor = conn.cursor()
+                for tick in rj['tick']['data'] :
+                    try :
+                        cursor.execute('insert into tick (tradeId, price, amount, ts, direction) values (?,?,?,?,?)', (tick['tradeId'], tick['price'], tick['amount'], tick['ts'], tick['direction']))
+                    except sqlite3.IntegrityError :
+                        print(sqlite3.IntegrityError)
+                cursor.close()
+                conn.commit()
+                print(rj['tick']['data'])
             else :
                 print(rj)
             
