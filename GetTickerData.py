@@ -6,6 +6,9 @@ from datetime import datetime
 from aiowebsocket.converses import AioWebSocket
 import json
 import sqlite3
+import ssl
+
+ssl._create_default_https_context = ssl._create_unverified_context
 
 conn = sqlite3.connect('btc_tick.db')
 cursor = conn.cursor()
